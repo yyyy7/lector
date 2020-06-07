@@ -12,10 +12,65 @@ const { buildMenuTemplate } = require('./menutemplate');
 // be closed automatically when the JavaScript object is garbage collected.
 let win, aboutWin;
 
+const truncate = (q) => {
+    var len = q.length;
+    if(len<=20) return q;
+    return q.substring(0, 10) + len + q.substring(len-10, len);
+}
+
+function tran(query) {
+            const { net } = require('electron');
+            const request = net.request({
+                method: 'POST',
+                url: 'https://openapi.youdao.com/api'
+            })
+
+           var appKey = '14240d2ebe4b8336';
+           var key = 'STdxLa3CuwSxeeWrFzSVbLlVoC8VN94c';//注意：暴露appSecret，有被盗用造成损失的风险
+           var salt = (new Date).getTime();
+           var curTime = Math.round(new Date().getTime()/1000);
+           // 多个query可以用\n连接  如 query='apple\norange\nbanana\npear'
+           var from = 'en';
+           var to = 'zh-CHS';
+           var str1 = appKey + truncate(query) + salt + curTime + key;
+           console.log(str1);
+           // var sign = sha256(str1);
+           var sign = require("crypto")
+                .createHash("sha256")
+                .update(str1)
+                .digest("hex");
+           var postData = {
+                   q: query,
+                   appKey: appKey,
+                   salt: salt,
+                   from: from,
+                   to: to,
+                   sign: sign,
+                   signType: "v3",
+                   curtime: curTime,
+           };
+
+           let body = '';
+           request.on('response', (response) => {
+               console.log(`HEADERS: ${JSON.stringify(response.headers)}`);
+
+               response.on('data', (chunk) => {
+                 console.log(`BODY: ${chunk}`)
+                 body += chunk.toString()
+               })
+               response.on('end', () => {
+                   console.log(`body: ${body}`);
+                   
+               })
+           })
+           request.write(JSON.stringify(postData));
+           request.end();
+        }
+
 function createWindow() {
     // Create the browser window.
     win = new BrowserWindow({
-        width: 800,
+        width: 1200,
         height: 600,
         minWidth: 300,
         minHeight: 300,
@@ -26,6 +81,7 @@ function createWindow() {
         },
         frame: false
     });
+    win.webContents.openDevTools();
 
     // and load the index.html of the app.
     win.loadFile('./src/index.html');
@@ -76,6 +132,10 @@ function createWindow() {
         menu.getMenuItemById('file-close').enabled = flag;
         menu.getMenuItemById('view-fullscreen').enabled = flag;
     });
+
+    ipcMain.on('query', (event, query) => {
+        tran(query);
+    })
 
 }
 

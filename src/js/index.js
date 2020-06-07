@@ -228,7 +228,14 @@
         /**
          * @desc Dispatches click event to window
          */
-        _propagateClick() {
+        _propagateClick(event = null) {
+            if (event != null) {
+                //const query = window.getSelection().toString();
+                const query = event.path[10].getSelection().toString();
+                ipcRenderer.send('query', query);
+
+            }
+
             window.dispatchEvent(new Event('mousedown'));
         }
 
@@ -237,9 +244,10 @@
          */
         _setViewerEvents() {
             this._viewerElement.contentDocument.addEventListener('click',
-                this._propagateClick);
+                (event) => this._propagateClick(event));
             this._viewerElement.contentDocument.addEventListener('mousedown',
                 this._propagateClick);
+            console.log(this._viewerElement.contentDocument)
         }
 
         /**
@@ -469,12 +477,17 @@
          * @desc Runs the application
          */
         run() {
+            console.log("hhhhhhhhhhhhhh");
             this._setMenuItemEvents();
             this._setSeekEvents();
             this._setViewerEvents();
             this._setWindowEvents();
             this._setExternalEvents();
             this._processRemoteArguments();
+
+            document.addEventListener('selectionchange', () => {
+              console.log(document.getSelection());
+            });
         }
 
     }
